@@ -1,7 +1,6 @@
 server:
   port: 80
 
-
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -15,3 +14,11 @@ spring:
 
 mybatis:
   mapper-locations: classpath*:mapper/*Mapper.xml
+
+# ======== WebSocket 调试日志 ========
+logging:
+  level:
+    org.springframework.web.socket: DEBUG
+    org.springframework.messaging: DEBUG
+    org.springframework.web.socket.messaging: TRACE
+    com.tencent.wxcloudrun.controller.CounterWebSocketController: DEBUG

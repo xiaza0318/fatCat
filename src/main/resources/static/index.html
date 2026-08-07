@@ -301,34 +301,37 @@
     </div>
   </div>
 </body>
-<script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
   integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 <script>
-  init();
-  function init() {
-    $.ajax("/api/count", {
-      method: "get",
-    }).done(function (res) {
-      if (res && res.data !== undefined) {
-        $(".count-number").html(res.data);
-      }
+  var stompClient = null;
+
+  function connect() {
+    var socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function (frame) {
+      console.log('WebSocket 已连接: ' + frame);
+      // 订阅计数器更新
+      stompClient.subscribe('/topic/counter', function (message) {
+        var res = JSON.parse(message.body);
+        if (res && res.data !== undefined) {
+          document.querySelector('.count-number').innerHTML = res.data;
+        }
+      });
+      // 初始化获取当前计数
+      stompClient.send('/app/counter/init', {}, '{}');
     });
   }
+
   function set(action) {
-    $.ajax("/api/count", {
-      method: "POST",
-      contentType: "application/json; charset=utf-8",
-      dataType: "json",
-      data: JSON.stringify({
-        action: action,
-      }),
-    }).done(function (res) {
-      if (res && res.data !== undefined) {
-        $(".count-number").html(res.data);
-      }
-    });
+    if (stompClient) {
+      stompClient.send('/app/counter', {}, JSON.stringify({ action: action }));
+    }
   }
+
+  connect();
 </script>
 
 </html>
