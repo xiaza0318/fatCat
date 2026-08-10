@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tencent.wxcloudrun.dao.UserMapper">
+
+    <resultMap id="userMap" type="com.tencent.wxcloudrun.model.User">
+        <id property="id" column="id"/>
+        <result property="uid" column="uid"/>
+        <result property="account" column="account"/>
+        <result property="password" column="password"/>
+        <result property="accountWay" column="account_way"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="avatar" column="avatar"/>
+        <result property="token" column="token"/>
+        <result property="platform" column="platform"/>
+        <result property="isBlocked" column="is_blocked"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByAccount" resultMap="userMap">
+        SELECT * FROM users WHERE account = #{account}
+    </select>
+
+    <select id="findByUid" resultMap="userMap">
+        SELECT * FROM users WHERE uid = #{uid}
+    </select>
+
+    <select id="findByToken" resultMap="userMap">
+        SELECT * FROM users WHERE token = #{token}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (uid, account, password, account_way, nick_name, avatar, token, platform, is_blocked)
+        VALUES (#{uid}, #{account}, #{password}, #{accountWay}, #{nickName}, #{avatar}, #{token}, #{platform}, 0)
+    </insert>
+
+    <update id="updateToken">
+        UPDATE users SET token = #{token} WHERE uid = #{uid}
+    </update>
+
+    <update id="updateNickName">
+        UPDATE users SET nick_name = #{nickName} WHERE uid = #{uid}
+    </update>
+
+</mapper>

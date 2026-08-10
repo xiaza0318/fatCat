@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tencent.wxcloudrun.dao.UserDataMapper">
+
+    <resultMap id="userDataMap" type="com.tencent.wxcloudrun.model.UserData">
+        <id property="id" column="id"/>
+        <result property="uid" column="uid"/>
+        <result property="regionId" column="region_id"/>
+        <result property="dataKey" column="data_key"/>
+        <result property="dataVal" column="data_val"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByUidAndRegion" resultMap="userDataMap">
+        SELECT * FROM user_data WHERE uid = #{uid} AND region_id = #{regionId}
+    </select>
+
+    <select id="findByKey" resultMap="userDataMap">
+        SELECT * FROM user_data
+        WHERE uid = #{uid} AND region_id = #{regionId} AND data_key = #{dataKey}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO user_data (uid, region_id, data_key, data_val)
+        VALUES (#{uid}, #{regionId}, #{dataKey}, #{dataVal})
+        ON DUPLICATE KEY UPDATE data_val = VALUES(data_val)
+    </insert>
+
+    <!-- 批量 upsert：MyBatis 不支持直接 foreach ON DUPLICATE KEY，
+         这里逐条插入，由调用方在 Service 层控制事务 -->
+    <insert id="batchUpsert">
+        INSERT INTO user_data (uid, region_id, data_key, data_val)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.uid}, #{item.regionId}, #{item.dataKey}, #{item.dataVal})
+        </foreach>
+        ON DUPLICATE KEY UPDATE data_val = VALUES(data_val)
+    </insert>
+
+    <delete id="deleteByKey">
+        DELETE FROM user_data
+        WHERE uid = #{uid} AND region_id = #{regionId} AND data_key = #{dataKey}
+    </delete>
+
+    <delete id="batchDelete">
+        DELETE FROM user_data
+        WHERE uid = #{uid} AND region_id = #{regionId}
+        AND data_key IN
+        <foreach collection="keys" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </delete>
+
+    <delete id="clearByUidAndRegion">
+        DELETE FROM user_data WHERE uid = #{uid} AND region_id = #{regionId}
+    </delete>
+
+</mapper>

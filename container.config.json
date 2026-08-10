@@ -1,7 +1,5 @@
 {
-	// 本配置文件仅配合模板部署使用，为模板部署的服务生成「服务设置」的初始值。
-	// 模板部署结束后，后续服务发布与本配置文件完全无关，修改「服务设置」请到控制台操作。
-	// 复制模板代码自行开发请忽略本配置文件。
+
 	
 	"containerPort": 80,                            
 	"minNum": 0,                                    
@@ -20,12 +18,18 @@
 			"PolicyThreshold": 50
 		}
 	],
-	"envParams": {},                                
+	"envParams": {
+		"MYSQL_USERNAME": "root",
+        "MYSQL_PASSWORD": "Wc320105!",
+        "MYSQL_ADDRESS": "10.15.106.183:3306"
+	},                                
 	"customLogs": "stdout",                         
 	"dataBaseName":"springboot_demo",               
 	"executeSQLs":[
 		"CREATE DATABASE IF NOT EXISTS springboot_demo;",
 		"USE springboot_demo;",
-		"CREATE TABLE IF NOT EXISTS `Counters` (`id` int(11) NOT NULL AUTO_INCREMENT, `count` int(11) NOT NULL DEFAULT 1, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE = InnoDB DEFAULT CHARSET = utf8;"
+		"CREATE TABLE IF NOT EXISTS `Counters` (`id` int(11) NOT NULL AUTO_INCREMENT, `count` int(11) NOT NULL DEFAULT 1, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE = InnoDB DEFAULT CHARSET = utf8;",
+		"CREATE TABLE IF NOT EXISTS `users` (`id` int(11) NOT NULL AUTO_INCREMENT, `uid` varchar(64) NOT NULL COMMENT '用户唯一标识', `account` varchar(128) NOT NULL COMMENT '登录账号', `password` varchar(128) NOT NULL COMMENT '密码', `account_way` tinyint(4) DEFAULT 0 COMMENT '账号类型', `nick_name` varchar(128) DEFAULT '' COMMENT '昵称', `avatar` varchar(512) DEFAULT '' COMMENT '头像URL', `token` varchar(128) DEFAULT '' COMMENT '登录token', `platform` varchar(32) DEFAULT '' COMMENT '平台', `is_blocked` tinyint(1) DEFAULT 0 COMMENT '是否封禁', `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_uid` (`uid`), UNIQUE KEY `uk_account` (`account`), KEY `idx_token` (`token`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;",
+		"CREATE TABLE IF NOT EXISTS `user_data` (`id` int(11) NOT NULL AUTO_INCREMENT, `uid` varchar(64) NOT NULL COMMENT '用户UID', `region_id` varchar(32) NOT NULL DEFAULT '1' COMMENT '分区ID', `data_key` varchar(128) NOT NULL COMMENT '数据键名', `data_val` mediumtext COMMENT '数据值', `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_uid_region_key` (`uid`, `region_id`, `data_key`), KEY `idx_uid_region` (`uid`, `region_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;"
 	]                                               
 }

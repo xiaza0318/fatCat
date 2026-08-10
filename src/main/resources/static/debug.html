@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebSocket 调试面板</title>
+  <style>
+    body { font-family: monospace; max-width: 640px; margin: 40px auto; background: #1e1e1e; color: #d4d4d4; }
+    .log { background: #252526; border: 1px solid #3e3e42; padding: 12px; height: 300px; overflow-y: auto; margin: 12px 0; font-size: 13px; white-space: pre-wrap; }
+    .log .info { color: #6a9955; }
+    .log .data { color: #ce9178; }
+    .log .error { color: #f44747; }
+    .log .sent { color: #569cd6; }
+    .log .received { color: #4ec9b0; }
+    button { margin: 4px 8px 4px 0; padding: 8px 16px; cursor: pointer; background: #0e639c; color: #fff; border: none; border-radius: 3px; }
+    button:disabled { background: #3e3e42; cursor: not-allowed; }
+    button.danger { background: #a31515; }
+    .status { padding: 4px 8px; border-radius: 2px; display: inline-block; }
+    .status.connected { background: #1e3a1e; color: #4ec9b0; }
+    .status.disconnected { background: #3a1e1e; color: #f44747; }
+  </style>
+</head>
+<body>
+  <h2>WebSocket 调试面板</h2>
+  <p>状态: <span id="status" class="status disconnected">未连接</span></p>
+
+  <div>
+    <button id="btnConnect" onclick="connect()">连接</button>
+    <button id="btnDisconnect" class="danger" onclick="disconnect()" disabled>断开</button>
+    <button id="btnInit" onclick="initCounter()" disabled>获取计数</button>
+    <button id="btnInc" onclick="sendAction('inc')" disabled>inc</button>
+    <button id="btnClear" onclick="sendAction('clear')" disabled>clear</button>
+  </div>
+
+  <p>当前计数: <strong id="countDisplay" style="font-size: 24px; color: #dcdcaa;">--</strong></p>
+
+  <h3>消息日志</h3>
+  <div id="log" class="log"></div>
+  <button onclick="document.getElementById('log').innerHTML = ''">清空日志</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <script>
+    var client = null;
+    var subscription = null;
+    var log = document.getElementById('log');
+
+    function appendLog(msg, cls) {
+      log.innerHTML += '<span class="'+cls+'">[' + new Date().toLocaleTimeString() + '] ' + msg + '</span>\n';
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function setStatus(connected) {
+      var el = document.getElementById('status');
+      document.getElementById('btnConnect').disabled = connected;
+      document.getElementById('btnDisconnect').disabled = !connected;
+      document.getElementById('btnInit').disabled = !connected;
+      document.getElementById('btnInc').disabled = !connected;
+      document.getElementById('btnClear').disabled = !connected;
+      if (connected) { el.className = 'status connected'; el.textContent = '已连接'; }
+      else           { el.className = 'status disconnected'; el.textContent = '未连接'; }
+    }
+
+    function connect() {
+      appendLog('正在连接 /ws ...', 'info');
+      var socket = new SockJS('/ws');
+      client = Stomp.over(socket);
+      client.debug = function(str) { appendLog('[STOMP] ' + str, 'info'); };
+      client.connect({}, function(frame) {
+        appendLog('连接成功: ' + frame, 'info');
+        setStatus(true);
+        subscription = client.subscribe('/topic/counter', function(msg) {
+          appendLog('收到推送 → ' + msg.body, 'received');
+          var res = JSON.parse(msg.body);
+          if (res && res.data !== undefined) {
+            document.getElementById('countDisplay').textContent = res.data;
+          }
+        });
+      }, function(err) {
+        appendLog('连接失败: ' + JSON.stringify(err), 'error');
+      });
+    }
+
+    function disconnect() {
+      if (subscription) { subscription.unsubscribe(); subscription = null; }
+      if (client) { client.disconnect(function() { appendLog('已断开连接', 'error'); }); }
+      setStatus(false);
+    }
+
+    function initCounter() {
+      appendLog('发送 → /app/counter/init', 'sent');
+      client.send('/app/counter/init', {}, '{}');
+    }
+
+    function sendAction(action) {
+      var payload = JSON.stringify({ action: action });
+      appendLog('发送 → /app/counter ' + payload, 'sent');
+      client.send('/app/counter', {}, payload);
+    }
+  </script>
+</body>
+</html>

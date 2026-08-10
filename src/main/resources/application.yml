@@ -1,7 +1,6 @@
 server:
   port: 80
 
-
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -12,6 +11,22 @@ spring:
     view:
       suffix: .html
       prefix: /
+  jackson:
+    default-property-inclusion: non-null
 
 mybatis:
   mapper-locations: classpath*:mapper/*Mapper.xml
+
+# ======== 游戏业务配置 ========
+game:
+  # 默认分区 ID
+  default-region-id: "1"
+
+# ======== 日志配置 ========
+logging:
+  level:
+    root: INFO
+    com.tencent.wxcloudrun: DEBUG
+    org.springframework.web.socket: DEBUG
+    org.springframework.messaging: DEBUG
+    org.springframework.web.socket.messaging: TRACE

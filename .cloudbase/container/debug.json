@@ -1,5 +1,11 @@
 {
-  "containers": [],
+  "containers": [
+    {
+      "name": "fatcat",
+      "domain": "",
+      "ip": ""
+    }
+  ],
   "config": {
     "fatcat": {
       "containerPort": 80,
