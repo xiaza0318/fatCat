@@ -89,10 +89,11 @@ public class AuthController {
      */
     @PostMapping("/unique-login")
     public ApiResponse uniqueLogin(@RequestBody Map<String, Object> body) {
-        String account = (String) body.get("account");
+        String account = body.get("account") != null ? body.get("account").toString() : null;
         int accountWay = body.containsKey("accountWay") ? ((Number) body.get("accountWay")).intValue() : 0;
-        String platform = (String) body.getOrDefault("platform", "H5");
-        String nickName = (String) body.getOrDefault("nickName", "");
+        Object platformObj = body.getOrDefault("platform", "H5");
+        String platform = platformObj != null ? platformObj.toString() : "H5";
+        String nickName = body.getOrDefault("nickName", "").toString();
 
         if (account == null || account.isEmpty()) {
             return ApiResponse.error("账号不能为空");
