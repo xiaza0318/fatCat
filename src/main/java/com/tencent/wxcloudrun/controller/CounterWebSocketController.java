@@ -33,9 +33,9 @@ public class CounterWebSocketController {
     }
 
     /**
-     * 处理客户端发送的计数操作（inc / clear）
-     * 客户端发送消息到 /app/counter
-     * 处理完后主动推送到 /topic/counter
+     * 处理客户端发送的计数操作（inc / clear） 
+     * 客户端发送消息到 /app/counter 
+     * 处理完后主动推送到 /topic/counter 
      */
     @MessageMapping("/counter")
     public void handleCounter(Map<String, String> payload) {
@@ -64,13 +64,13 @@ public class CounterWebSocketController {
             return;
         }
 
-        // 主动推送最新计数到所有订阅 /topic/counter 的客户端
+        // 主动推送最新计数到所有订阅 /topic/counter 的客户端 
         messagingTemplate.convertAndSend("/topic/counter", ApiResponse.ok(count));
     }
 
     /**
-     * 客户端订阅 /topic/counter 时，获取当前计数并返回
-     * 客户端发送消息到 /app/counter/init
+     * 客户端订阅 /topic/counter 时，获取当前计数并返回 
+     * 客户端发送消息到 /app/counter/init 
      */
     @MessageMapping("/counter/init")
     @SendTo("/topic/counter")
