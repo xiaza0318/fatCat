@@ -9,8 +9,9 @@ import java.util.Map;
 /**
  * 消息分发器 —— 根据 cmd 字段将消息路由到对应的 Handler
  * 
- * 消息格式（来自 feijiu2 前端）：
- *   { "data": { "cmd": 101001, "lang": "zh", "token": "...", ... } }
+ * 消息格式（兼容两种，前端 WmSocketJSF.send 会剥掉 data 包装直接发送内层对象）：
+ *   1. { "data": { "cmd": 101001, "lang": "zh", "token": "...", ... } }
+ *   2. { "cmd": 101001, "lang": "zh", "token": "...", ... }
  * 
  * 响应格式：
  *   { "cmd": 101001, "status": "success", ... }
@@ -27,8 +28,15 @@ public class MessageDispatcher {
     public static ParsedMessage parse(String rawJson) {
         try {
             Map<String, Object> outer = objectMapper.readValue(rawJson, Map.class);
-            Map<String, Object> data = (Map<String, Object>) outer.get("data");
-            if (data == null) {
+            Map<String, Object> data;
+            Object dataObj = outer.get("data");
+            if (dataObj instanceof Map) {
+                // 格式1：带 data 包装
+                data = (Map<String, Object>) dataObj;
+            } else if (outer.containsKey("cmd")) {
+                // 格式2：无 data 包装，消息体本身就是业务数据
+                data = outer;
+            } else {
                 logger.warn("消息缺少 data 字段: {}", rawJson);
                 return new ParsedMessage(GameCommand.UNKNOWN, null, rawJson);
             }

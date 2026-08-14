@@ -21,7 +21,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 原生 WebSocket Handler —— 处理 feijiu2 游戏协议
  * 
- * 消息格式：{ "data": { "cmd": 101000, "lang": "zh", "token": "...", ... } }
+ * 消息格式（兼容两种，前端 WmSocketJSF.send 发送的是无 data 包装的内层对象）：
+ *   { "data": { "cmd": 101000, "lang": "zh", "token": "...", ... } }
+ *   或
+ *   { "cmd": 101000, "lang": "zh", "token": "...", ... }
  * 响应格式：{ "cmd": 101000, "status": "success"/"fail", ... }
  * 
  * 已实现命令：
