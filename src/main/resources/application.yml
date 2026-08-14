@@ -21,6 +21,10 @@ mybatis:
 game:
   # 默认分区 ID
   default-region-id: "1"
+  # 游戏资源版本号（与前端 Const.version 一致，WS 登录后下发给前端校验）
+  version: "1.0.9"
+  # 热更新资源版本号（留空 = 不走热更新版本校验）
+  prod-url-version: ""
 
 # ======== 日志配置 ========
 logging:

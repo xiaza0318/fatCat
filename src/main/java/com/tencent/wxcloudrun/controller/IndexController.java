@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class IndexController {
 
   /**
-   * 主页页面
+   * 主页页面 
    * @return API response html
    */
   @GetMapping
