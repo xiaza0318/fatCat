@@ -15,8 +15,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 原生 WebSocket Handler —— 处理 feijiu2 游戏协议
@@ -46,6 +48,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     /** 已连接的 session 集合 */
     private static final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+
+    /** 粘包分片缓冲：stickId -> 分片列表（按 idx 存放），防止大体积存档（如合成棋盘/卡片数据）在传输中被丢弃 */
+    private static final Map<String, List<String>> stickBuffers = new ConcurrentHashMap<>();
 
     @Autowired
     private AuthService authService;
@@ -163,15 +168,51 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     /**
      * 粘包分片处理（100000）
-     * 目前简单回应成功，大数据传输主要走 HTTP
+     * 前端对 >~21KB 的消息拆分为多个分片，按"收到上一片回应才发下一片"的机制推进：
+     *   { "cmd": 100000, "stick_id": uuid, "stick_val": "<分片>", "isStart": bool, "isEnd": bool, "idx": N }
+     * 服务端需要：
+     *   1. 回显 stick_id / idx / isEnd，前端据此发送下一分片或结束
+     *   2. 缓冲分片；收到 isEnd=true 时重组完整 JSON，并作为正常命令分发处理
      */
     private void handleStickPack(WebSocketSession session, MessageDispatcher.ParsedMessage parsed) {
-        String isEnd = parsed.getString("isEnd");
-        if ("true".equals(isEnd) || "1".equals(isEnd)) {
-            logger.debug("粘包传输完成: stickId={}", parsed.getString("stick_id"));
+        String stickId = parsed.getString("stick_id");
+        String stickVal = parsed.getString("stick_val");
+        boolean isEnd = "true".equals(parsed.getString("isEnd")) || "1".equals(parsed.getString("isEnd"));
+        int idx = parsed.getInt("idx");
+
+        if (stickId != null && stickVal != null) {
+            List<String> frags = stickBuffers.computeIfAbsent(stickId, k -> new CopyOnWriteArrayList<>());
+            // 按 idx 放置分片（防御乱序/重复）
+            while (frags.size() <= idx) {
+                frags.add(null);
+            }
+            frags.set(idx, stickVal);
         }
-        String resp = MessageDispatcher.ok(GameCommand.StickPack, null);
-        sendMessage(session, resp);
+
+        // 回显分片信息（前端 respStickPack 依赖 isEnd / stick_id / idx 推进）
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("stick_id", stickId);
+        extra.put("idx", idx);
+        extra.put("isEnd", isEnd);
+        sendMessage(session, MessageDispatcher.ok(GameCommand.StickPack, extra));
+
+        if (isEnd && stickId != null) {
+            // 收齐分片：重组完整消息，并作为正常命令处理
+            List<String> frags = stickBuffers.remove(stickId);
+            if (frags != null) {
+                StringBuilder sb = new StringBuilder();
+                for (String f : frags) {
+                    if (f != null) {
+                        sb.append(f);
+                    }
+                }
+                String fullJson = sb.toString();
+                logger.debug("粘包重组完成 stickId={}, 重组长度={}", stickId, fullJson.length());
+                if (!fullJson.isEmpty()) {
+                    handleTextMessage(session, new TextMessage(fullJson));
+                }
+            }
+        }
     }
 
     /**
