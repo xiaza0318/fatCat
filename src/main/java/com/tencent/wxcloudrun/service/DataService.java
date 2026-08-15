@@ -36,6 +36,8 @@ public class DataService {
     /**
      * 获取某个分区的全量 JSON（前端 GetRegionData 需要的格式）
      * 返回 { "key1": "val1", "key2": "val2", ... } 的 JSON 字符串
+     * 注意：值必须按 JSON 字符串编码（转义引号）——前端 GameStorage.setAll
+     * 期望拿到的是字符串值；若原样嵌入对象，前端会存成 "[object Object]" 导致还原失败。
      */
     public String getRegionDataJson(String uid, String regionId) {
         Map<String, String> data = getRegionData(uid, regionId);
@@ -44,7 +46,8 @@ public class DataService {
         for (Map.Entry<String, String> e : data.entrySet()) {
             if (!first) sb.append(",");
             sb.append("\"").append(escapeJson(e.getKey())).append("\":");
-            sb.append(e.getValue() != null ? e.getValue() : "null");
+            // 值按 JSON 字符串编码（兼容前端 GameStorage.setAll 期望字符串值）
+            sb.append("\"").append(escapeJson(e.getValue() != null ? e.getValue() : "")).append("\"");
             first = false;
         }
         sb.append("}");
