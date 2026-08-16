@@ -2,6 +2,7 @@ package com.tencent.wxcloudrun.service;
 
 import com.tencent.wxcloudrun.dao.UserMapper;
 import com.tencent.wxcloudrun.model.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -132,13 +134,21 @@ public class AuthService {
                 + "&grant_type=authorization_code";
         try {
             RestTemplate restTemplate = new RestTemplate();
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> resp = restTemplate.getForObject(url, java.util.Map.class);
+            // 注意：微信接口返回的 Content-Type 是 text/plain（不是 application/json），
+            // RestTemplate 直接转 Map 会抛 UnknownContentTypeException，
+            // 因此先按字符串接收，再手动解析 JSON。
+            String respStr = restTemplate.getForObject(url, String.class);
+            if (respStr == null || respStr.isEmpty()) {
+                logger.error("code2Session 返回为空");
+                return null;
+            }
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> resp = mapper.readValue(respStr, Map.class);
             if (resp != null && resp.get("openid") != null) {
                 logger.info("code2Session 成功，openid={}", resp.get("openid"));
                 return resp.get("openid").toString();
             }
-            logger.error("code2Session 失败: {}", resp);
+            logger.error("code2Session 失败: {}", respStr);
         } catch (Exception e) {
             logger.error("code2Session 请求异常", e);
         }
