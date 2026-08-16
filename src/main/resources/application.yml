@@ -26,6 +26,13 @@ game:
   # 热更新资源版本号（留空 = 不走热更新版本校验）
   prod-url-version: ""
 
+# ======== 微信小游戏配置 ========
+wx:
+  # 小游戏 AppID（微信公众平台 → 开发管理 → 开发设置）
+  appid: ""
+  # 小游戏 AppSecret（与 AppID 配套，仅后端保存）
+  secret: ""
+
 # ======== 日志配置 ========
 logging:
   level:

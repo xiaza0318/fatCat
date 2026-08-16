@@ -2,8 +2,12 @@ package com.tencent.wxcloudrun.service;
 
 import com.tencent.wxcloudrun.dao.UserMapper;
 import com.tencent.wxcloudrun.model.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
 
@@ -13,8 +17,18 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+
     @Autowired
     private UserMapper userMapper;
+
+    /** 小游戏 AppID（微信公众平台获取），用于 code2Session 换取 openid */
+    @Value("${wx.appid:}")
+    private String wxAppId;
+
+    /** 小游戏 AppSecret（微信公众平台获取，与 AppID 配套） */
+    @Value("${wx.secret:}")
+    private String wxSecret;
 
     /**
      * 账号密码注册
@@ -90,10 +104,45 @@ public class AuthService {
     }
 
     /**
-     * 微信登录：通过 openid 查找或创建用户
+     * 微信登录：用 wx.login 的临时 code 换取稳定 openid，再以 openid 查找/创建用户。
+     * 注意：wx.login 的 code 是一次性、每次登录都不同的，不能直接当 openid 用，
+     * 否则每次登录都会生成新账号、存档永远丢失。
      */
-    public User wxLogin(String openid, String nickName) {
+    public User wxLogin(String code, String nickName) {
+        String openid = exchangeCodeForOpenid(code);
+        if (openid == null || openid.isEmpty()) {
+            return null;
+        }
         return uniqueLogin("wx_" + openid, 3, "WX", nickName);
+    }
+
+    /**
+     * 调用微信 code2Session 接口，用临时 code 换取稳定 openid。
+     * 需要在小游戏后台配置 appid/appsecret（application.yml 的 wx.appid / wx.secret）。
+     */
+    private String exchangeCodeForOpenid(String code) {
+        if (wxAppId == null || wxAppId.isEmpty() || wxSecret == null || wxSecret.isEmpty()) {
+            logger.error("未配置 wx.appid / wx.secret，无法换取 openid（微信登录将失败）");
+            return null;
+        }
+        String url = "https://api.weixin.qq.com/sns/jscode2session"
+                + "?appid=" + wxAppId
+                + "&secret=" + wxSecret
+                + "&js_code=" + code
+                + "&grant_type=authorization_code";
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> resp = restTemplate.getForObject(url, java.util.Map.class);
+            if (resp != null && resp.get("openid") != null) {
+                logger.info("code2Session 成功，openid={}", resp.get("openid"));
+                return resp.get("openid").toString();
+            }
+            logger.error("code2Session 失败: {}", resp);
+        } catch (Exception e) {
+            logger.error("code2Session 请求异常", e);
+        }
+        return null;
     }
 
     /**
